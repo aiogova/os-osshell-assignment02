@@ -7,6 +7,9 @@
 #include <filesystem>
 #include <unistd.h>
 
+#include <cstdint>
+#include <sys/wait.h>
+
 bool fileExecutableExists(std::string file_path);
 void splitString(std::string text, char d, std::vector<std::string>& result);
 void vectorOfStringsToArrayOfCharArrays(std::vector<std::string>& list, char ***result);
@@ -30,21 +33,96 @@ int main (int argc, char **argv)
     // Welcome message
     printf("Welcome to OSShell! Please enter your commands ('exit' to quit).\n");
 
-    // Repeat:
-    //  Print prompt for user input: "osshell> " (no newline)
-    //  Get user input for next command
-    //  If command is `exit` exit loop / quit program
-    //  If command is `history` print previous N commands
-    //  For all other commands, check if an executable by that name is in one of the PATH directories
-    //   If yes, execute it
-    //   If no, print error statement: "<command_name>: Error command not found" (do include newline)
+    bool commandFound;
 
+    // Repeat:
+    while (true) {
+        commandFound = false;
+
+        //  Print prompt for user input: "osshell> " (no newline)
+        std::cout << "osshell> ";
+
+        //  Get user input for next command
+        std::getline(std::cin, user_command);
+
+        // If user doesn't type anything, jump to the next iteration of the loop
+        if (user_command.empty())
+        {
+            continue;
+        }
+
+        //  If command is `exit` exit loop / quit program
+        if (user_command == "exit")
+        {
+            break;
+        }
+
+        //  If command is `history` print previous N commands
+        // CODE FOR IMPLEMENTING THE HISTORY COMMAND GOES HERE
+
+        //  For all other commands, check if an executable by that name is in one of the PATH directories
+        // split the command
+        splitString(user_command, ' ', command_list);
+
+        // extract the command name
+        std::string command_name = command_list[0];
+
+        std::string full_path_to_command;
+
+        // search the PATH directories for that command
+        for (int i = 0; i < os_path_list.size(); i++) {
+            // build the full path
+            full_path_to_command = os_path_list[i] + "/" + command_name;
+
+            // checks if the command exists AND is executable
+            // 0 means the command was found, -1 means the command was not found
+            if (access(full_path_to_command.c_str(), X_OK) == 0) 
+            {
+                commandFound = true;
+                break;
+            } 
+            
+        }
+
+        //   If yes (an executable by that name is in one of the PATH directories), execute it
+        if (commandFound) 
+        {
+            // fork(): create child process
+            int pid = fork();
+
+            // child process
+            if (pid == 0) 
+            {
+                // prepare arguments for execv()
+                vectorOfStringsToArrayOfCharArrays(command_list, &command_list_exec);
+
+                // call execv() to execute the command by replacing the current process (child process)
+                execv(full_path_to_command.c_str(), command_list_exec);
+            }
+            // parent process
+            else 
+            {
+                // wait for child to finish
+                int status;
+                waitpid(pid, &status, 0);
+            }   
+        }
+        //   If no, print error statement: "<command_name>: Error command not found" (do include newline)
+        else 
+        {
+            std::cout << command_name << ": Error command not found" << std::endl;
+        }
+
+    }
 
 
     /************************************************************************************
      *   Example code - remove in actual program                                        *
      ************************************************************************************/
     // Shows how to loop over the directories in the PATH environment variable
+
+    /* // remove this multi-line comment if you want to run the example code
+
     int i;
     for (i = 0; i < os_path_list.size(); i++)
     {
@@ -81,6 +159,9 @@ int main (int argc, char **argv)
     // free memory for `command_list_exec`
     freeArrayOfCharArrays(command_list_exec, command_list.size() + 1);
     printf("------\n");
+
+    */
+
     /************************************************************************************
      *   End example code                                                               *
      ************************************************************************************/
