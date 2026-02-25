@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include <sys/wait.h>
+#include <filesystem>
 
 bool fileExecutableExists(std::string file_path);
 void splitString(std::string text, char d, std::vector<std::string>& result);
@@ -74,9 +75,8 @@ int main (int argc, char **argv)
             // build the full path
             full_path_to_command = os_path_list[i] + "/" + command_name;
 
-            // checks if the command exists AND is executable
-            // 0 means the command was found, -1 means the command was not found
-            if (access(full_path_to_command.c_str(), X_OK) == 0) 
+            // checks if the command exists AND is executable AND is not a directory
+            if (fileExecutableExists(full_path_to_command)) 
             {
                 commandFound = true;
                 break;
@@ -98,6 +98,10 @@ int main (int argc, char **argv)
 
                 // call execv() to execute the command by replacing the current process (child process)
                 execv(full_path_to_command.c_str(), command_list_exec);
+
+                // If execv returns, it failed
+                perror("execv failed");
+                exit(1);
             }
             // parent process
             else 
@@ -179,6 +183,13 @@ bool fileExecutableExists(std::string file_path)
     bool exists = false;
     // check if `file_path` exists
     // if so, ensure it is not a directory and that it has executable permissions
+    
+    // access() checks if the file exists AND is executable. 0 means the command was found and is executable, -1 means the command was not found or is not executable
+    // is_directory() checks if the file is a directory
+    if ((access(file_path.c_str(), X_OK) == 0) && !(std::filesystem::is_directory(file_path))) 
+    {
+        exists = true;
+    } 
 
     return exists;
 }
