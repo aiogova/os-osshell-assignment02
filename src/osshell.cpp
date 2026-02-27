@@ -70,18 +70,35 @@ int main (int argc, char **argv)
 
         std::string full_path_to_command;
 
-        // search the PATH directories for that command
-        for (int i = 0; i < os_path_list.size(); i++) {
-            // build the full path
-            full_path_to_command = os_path_list[i] + "/" + command_name;
-
-            // checks if the command exists AND is executable AND is not a directory
-            if (fileExecutableExists(full_path_to_command)) 
-            {
+        //checks if the "/" character is in the command char array (npos means "null" essentially)
+        if(command_name.find('/') != std::string::npos){
+            //only occurs if "/" WAS in char array
+            //checks if given command after "/" exists in file directory
+            if(fileExecutableExists(command_name)){
+                //if command exists, set commandFound to true, and makes the PATH of the command to the command name
                 commandFound = true;
-                break;
-            } 
-            
+                full_path_to_command = command_name;
+            }else{
+                //Error handling, if command is not found
+                std::cout << command_name << ": Error command not found" << std::endl;
+                continue;
+            }
+        }
+        //only occurs if "/" was NOT in char array
+        else{
+                // search the PATH directories for that command
+            for (int i = 0; i < os_path_list.size(); i++) {
+                // build the full path
+                full_path_to_command = os_path_list[i] + "/" + command_name;
+
+                // checks if the command exists AND is executable AND is not a directory
+                if (fileExecutableExists(full_path_to_command)) 
+                {
+                    commandFound = true;
+                    break;
+                } 
+                
+            }
         }
 
         //   If yes (an executable by that name is in one of the PATH directories), execute it
