@@ -6,10 +6,13 @@
 #include <vector>
 #include <filesystem>
 #include <unistd.h>
+#include <cctype>
 
 #include <cstdint>
 #include <sys/wait.h>
 #include <filesystem>
+#include <cctype>
+#include <fstream>
 
 bool fileExecutableExists(std::string file_path);
 void splitString(std::string text, char d, std::vector<std::string>& result);
@@ -26,9 +29,19 @@ int main (int argc, char **argv)
     // Create list to store history
     std::vector<std::string> history;
 
+    // Load persisted history (if any)
+    {
+        std::ifstream histin("history.txt");
+        std::string line;
+        while (histin && std::getline(histin, line)) {
+            if (!line.empty())
+                history.push_back(line);
+        }
+    }
+
     // Create variables for storing command user types
     std::string user_command;               // to store command user types in
-    std::vector<std::string> command_list;  // to store `user_command` split into its variour parameters
+    std::vector<std::string> command_list;  // to store `user_command` split into its various parameters
     char **command_list_exec;               // to store `command_list` converted to an array of character arrays
 
     // Welcome message
@@ -58,12 +71,63 @@ int main (int argc, char **argv)
             break;
         }
 
-        //  If command is `history` print previous N commands
-        // CODE FOR IMPLEMENTING THE HISTORY COMMAND GOES HERE
-
         //  For all other commands, check if an executable by that name is in one of the PATH directories
         // split the command
         splitString(user_command, ' ', command_list);
+        
+        history.push_back(user_command);
+        {
+            std::ofstream histout("history.txt", std::ios::app);
+            if (histout) histout << user_command << '\n';
+        }
+        
+        //if the command is history
+        if (command_list.size() > 0 && command_list[0] =="history") {
+            //if the command is history (no integer)
+            if (command_list.size() == 1) {
+                for (size_t i=0; i < history.size(); ++i)
+                    std::cout << (i+1) << " " <<history[i] << std::endl;
+                continue;
+            }
+            //if the command is history(integer)
+            if (command_list.size() == 2) {
+                if (command_list[1] == "clear") {
+                    std::cout<<"it worked! we're saved!" <<std::endl;
+                    //clear the history
+                    std::ofstream ofs;
+                    ofs.open("history.txt", std::ofstream::out | std::ofstream::trunc);
+                    ofs.close();
+                    history.clear();
+                    continue;
+                }
+                std::string arg = command_list[1];
+                bool ok = !arg.empty();
+                for (char ch : arg) if (!std::isdigit((unsigned char)ch)) 
+                    {ok = false; break;}
+                //if the command is history (without integer)
+                if (!ok) {
+                    std::cout <<"history: numeric argument required" << std::endl;
+                    continue;
+                }
+                int n = std::stoi(arg);
+                //if the command is history (with negative integer)
+                if (n<=0) {
+                    std::cout << "history: argument must be positive" << std::endl;
+                    continue;
+                }
+                int start = (int)history.size() -n;
+                if (start <0) start = 0;
+                for (int i = start; i < (int)history.size(); ++i) {
+                    std::cout << (i+1) << " " << history[i] << std::endl;
+                }
+                continue;
+            }
+            //fallback case for weirdness
+            else {
+                std::cout << "history: too many arguments" << std::endl;
+                continue;
+            }
+        }
 
         // extract the command name
         std::string command_name = command_list[0];
