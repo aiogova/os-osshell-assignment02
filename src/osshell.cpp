@@ -65,6 +65,15 @@ int main (int argc, char **argv)
             continue;
         }
 
+        history.push_back(user_command);
+        {
+            while (history.size() > 128) {
+                history.erase(history.begin());
+            }
+            std::ofstream histout("history.txt", std::ios::app);
+            if (histout) histout << user_command << '\n';
+        }
+
         //  If command is `exit` exit loop / quit program
         if (user_command == "exit")
         {
@@ -75,24 +84,17 @@ int main (int argc, char **argv)
         // split the command
         splitString(user_command, ' ', command_list);
         
-        history.push_back(user_command);
-        {
-            std::ofstream histout("history.txt", std::ios::app);
-            if (histout) histout << user_command << '\n';
-        }
-        
         //if the command is history
         if (command_list.size() > 0 && command_list[0] =="history") {
             //if the command is history (no integer)
             if (command_list.size() == 1) {
-                for (size_t i=0; i < history.size(); ++i)
-                    std::cout << (i+1) << " " <<history[i] << std::endl;
+                for (size_t i=0; i < history.size()-1; ++i)
+                    std::cout << "  " << (i+1) << ": " <<history[i] << std::endl;
                 continue;
             }
             //if the command is history(integer)
             if (command_list.size() == 2) {
                 if (command_list[1] == "clear") {
-                    std::cout<<"it worked! we're saved!" <<std::endl;
                     //clear the history
                     std::ofstream ofs;
                     ofs.open("history.txt", std::ofstream::out | std::ofstream::trunc);
@@ -106,19 +108,19 @@ int main (int argc, char **argv)
                     {ok = false; break;}
                 //if the command is history (without integer)
                 if (!ok) {
-                    std::cout <<"history: numeric argument required" << std::endl;
+                    std::cout << "Error: history expects an integer > 0 (or 'clear')" << std::endl;
                     continue;
                 }
                 int n = std::stoi(arg);
                 //if the command is history (with negative integer)
                 if (n<=0) {
-                    std::cout << "history: argument must be positive" << std::endl;
+                    std::cout << "Error: history expects an integer > 0 (or 'clear')" << std::endl;
                     continue;
                 }
-                int start = (int)history.size() -n;
+                int start = (int)history.size()-(n+1);
                 if (start <0) start = 0;
-                for (int i = start; i < (int)history.size(); ++i) {
-                    std::cout << (i+1) << " " << history[i] << std::endl;
+                for (int i = start; i < (int)history.size()-1; ++i) {
+                    std::cout << "  " << (i+1) << ": " << history[i] << std::endl;
                 }
                 continue;
             }
@@ -128,6 +130,7 @@ int main (int argc, char **argv)
                 continue;
             }
         }
+
 
         // extract the command name
         std::string command_name = command_list[0];
