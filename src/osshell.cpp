@@ -67,7 +67,7 @@ int main (int argc, char **argv)
 
         history.push_back(user_command);
         {
-            while (history.size() > 128) {
+            while (history.size() > 129) {
                 history.erase(history.begin());
             }
             std::ofstream histout("history.txt", std::ios::app);
